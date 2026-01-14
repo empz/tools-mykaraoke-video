@@ -15,9 +15,7 @@ function Home() {
   return (
     <div>
       <div>
-        <h1 className="text-2xl">
-          MyKaraoke Video Tools
-        </h1>
+        <h1 className="text-2xl">MyKaraoke Video Tools</h1>
         <p className="text-muted-foreground">
           Free tools for karaoke, audio processing, and music
         </p>
