@@ -1,4 +1,4 @@
-import { Gauge, Home, Music } from "lucide-react"
+import { Gauge, Home, Music, Music2 } from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
@@ -14,6 +14,7 @@ const items: Item[] = [
   { icon: Home, title: "Home", path: "/" },
   { icon: Music, title: "Key & BPM", path: "/key-bpm-analyzer" },
   { icon: Gauge, title: "BPM Changer", path: "/bpm-changer" },
+  { icon: Music2, title: "Pitch Shifter", path: "/pitch-shifter" },
 ]
 
 export function AppSidebar() {

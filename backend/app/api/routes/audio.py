@@ -221,3 +221,93 @@ async def change_bpm(
         # Clean up temporary file
         if tmp_path and tmp_path.exists():
             tmp_path.unlink()
+
+
+@router.post("/pitch-shift")
+async def pitch_shift(
+    file: UploadFile,
+    semitones: int = Form(..., ge=-12, le=12),
+) -> StreamingResponse:
+    """
+    Shift the pitch of an audio file by a specified number of semitones.
+
+    - semitones: -12 to +12 (negative = lower pitch, positive = higher pitch)
+    - Preserves tempo while changing pitch.
+    - Returns the processed audio file in the same format as input.
+    """
+    # Validate filename
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Filename is required")
+
+    # Validate file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed formats: {', '.join(ALLOWED_EXTENSIONS)}",
+        )
+
+    # Read and validate file size
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
+        )
+
+    tmp_path: Path | None = None
+    try:
+        # Save input file
+        with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+            tmp.write(content)
+
+        # Load audio
+        y, sr = librosa.load(str(tmp_path), sr=22050)
+        duration = float(librosa.get_duration(y=y, sr=sr))
+
+        # Validate duration
+        if duration > MAX_DURATION_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Audio too long. Maximum duration: {MAX_DURATION_SECONDS // 60} minutes",
+            )
+
+        # Validate semitones is not zero
+        if semitones == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="No pitch shift requested. Please select a non-zero semitone value.",
+            )
+
+        # Apply pitch shift
+        y_shifted = librosa.effects.pitch_shift(y, sr=sr, n_steps=semitones)
+
+        # Write to buffer
+        buffer = io.BytesIO()
+        sf.write(buffer, y_shifted, sr, format=EXTENSION_TO_FORMAT[file_ext])
+        buffer.seek(0)
+
+        # Generate output filename
+        stem = Path(file.filename).stem
+        sign = "+" if semitones >= 0 else ""
+        output_filename = f"{stem}_{sign}{semitones}st{file_ext}"
+
+        return StreamingResponse(
+            buffer,
+            media_type=EXTENSION_TO_MIME[file_ext],
+            headers={
+                "Content-Disposition": f'attachment; filename="{output_filename}"'
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process audio: {str(e)}"
+        )
+    finally:
+        # Clean up temporary file
+        if tmp_path and tmp_path.exists():
+            tmp_path.unlink()

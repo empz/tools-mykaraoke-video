@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutPitchShifterRouteImport } from './routes/_layout/pitch-shifter'
 import { Route as LayoutKeyBpmAnalyzerRouteImport } from './routes/_layout/key-bpm-analyzer'
 import { Route as LayoutBpmChangerRouteImport } from './routes/_layout/bpm-changer'
 
@@ -21,6 +22,11 @@ const LayoutRoute = LayoutRouteImport.update({
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutPitchShifterRoute = LayoutPitchShifterRouteImport.update({
+  id: '/pitch-shifter',
+  path: '/pitch-shifter',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutKeyBpmAnalyzerRoute = LayoutKeyBpmAnalyzerRouteImport.update({
@@ -35,28 +41,37 @@ const LayoutBpmChangerRoute = LayoutBpmChangerRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof LayoutIndexRoute
-  '/key-bpm-analyzer': typeof LayoutKeyBpmAnalyzerRoute
   '/bpm-changer': typeof LayoutBpmChangerRoute
+  '/key-bpm-analyzer': typeof LayoutKeyBpmAnalyzerRoute
+  '/pitch-shifter': typeof LayoutPitchShifterRoute
+  '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof LayoutIndexRoute
-  '/key-bpm-analyzer': typeof LayoutKeyBpmAnalyzerRoute
   '/bpm-changer': typeof LayoutBpmChangerRoute
+  '/key-bpm-analyzer': typeof LayoutKeyBpmAnalyzerRoute
+  '/pitch-shifter': typeof LayoutPitchShifterRoute
+  '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
-  '/_layout/': typeof LayoutIndexRoute
-  '/_layout/key-bpm-analyzer': typeof LayoutKeyBpmAnalyzerRoute
   '/_layout/bpm-changer': typeof LayoutBpmChangerRoute
+  '/_layout/key-bpm-analyzer': typeof LayoutKeyBpmAnalyzerRoute
+  '/_layout/pitch-shifter': typeof LayoutPitchShifterRoute
+  '/_layout/': typeof LayoutIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/key-bpm-analyzer' | '/bpm-changer'
+  fullPaths: '/bpm-changer' | '/key-bpm-analyzer' | '/pitch-shifter' | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/key-bpm-analyzer' | '/bpm-changer'
-  id: '__root__' | '/_layout' | '/_layout/' | '/_layout/key-bpm-analyzer' | '/_layout/bpm-changer'
+  to: '/bpm-changer' | '/key-bpm-analyzer' | '/pitch-shifter' | '/'
+  id:
+    | '__root__'
+    | '/_layout'
+    | '/_layout/bpm-changer'
+    | '/_layout/key-bpm-analyzer'
+    | '/_layout/pitch-shifter'
+    | '/_layout/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -79,6 +94,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/pitch-shifter': {
+      id: '/_layout/pitch-shifter'
+      path: '/pitch-shifter'
+      fullPath: '/pitch-shifter'
+      preLoaderRoute: typeof LayoutPitchShifterRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/key-bpm-analyzer': {
       id: '/_layout/key-bpm-analyzer'
       path: '/key-bpm-analyzer'
@@ -97,15 +119,17 @@ declare module '@tanstack/react-router' {
 }
 
 interface LayoutRouteChildren {
-  LayoutIndexRoute: typeof LayoutIndexRoute
-  LayoutKeyBpmAnalyzerRoute: typeof LayoutKeyBpmAnalyzerRoute
   LayoutBpmChangerRoute: typeof LayoutBpmChangerRoute
+  LayoutKeyBpmAnalyzerRoute: typeof LayoutKeyBpmAnalyzerRoute
+  LayoutPitchShifterRoute: typeof LayoutPitchShifterRoute
+  LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutIndexRoute: LayoutIndexRoute,
-  LayoutKeyBpmAnalyzerRoute: LayoutKeyBpmAnalyzerRoute,
   LayoutBpmChangerRoute: LayoutBpmChangerRoute,
+  LayoutKeyBpmAnalyzerRoute: LayoutKeyBpmAnalyzerRoute,
+  LayoutPitchShifterRoute: LayoutPitchShifterRoute,
+  LayoutIndexRoute: LayoutIndexRoute,
 }
 
 const LayoutRouteWithChildren =
