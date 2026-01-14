@@ -182,4 +182,9 @@ function MyTool() {
 - **Production-like**: Use `docker compose up` for full stack with Traefik, Adminer, etc.
 - `docker-compose.dev.yml` - minimal services for local dev (db, backend only)
 - `docker-compose.yml` + `docker-compose.override.yml` - full stack with all services
-- Backend hot-reloads automatically via FastAPI's `--reload` flag
+
+**Hot Reload Setup**:
+- Frontend: Vite dev server with HMR (instant updates)
+- Backend: Uses `docker compose watch` to sync file changes into the container, combined with FastAPI's `--reload` flag for automatic server restart
+- Edit any Python file in `backend/` and changes apply automatically
+- Edit `pyproject.toml` and the container rebuilds automatically
