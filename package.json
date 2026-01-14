@@ -1,0 +1,15 @@
+{
+  "name": "mykaraoke-video-tools",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "docker compose -f docker-compose.dev.yml up --build",
+    "dev:frontend": "npm run wait-for-backend && npm run --prefix frontend dev",
+    "wait-for-backend": "node scripts/wait-for-backend.js",
+    "stop": "docker compose -f docker-compose.dev.yml down",
+    "clean": "docker compose -f docker-compose.dev.yml down -v"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

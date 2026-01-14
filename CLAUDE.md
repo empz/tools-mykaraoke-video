@@ -14,9 +14,17 @@ MyKaraoke Video - Free Tools: A web application providing free tools for karaoke
 
 ### Development
 ```bash
-docker compose watch              # Start full stack with hot reload (recommended)
-docker compose up -d              # Start stack in background
-docker compose down -v            # Stop and remove volumes
+npm install                       # First time setup (installs concurrently)
+npm run dev                       # Start everything (backend + frontend with HMR)
+npm run stop                      # Stop all services
+npm run clean                     # Stop and remove database volume
+```
+
+### Full Stack (Production-like)
+```bash
+docker compose up -d                      # Start all services via Traefik
+docker compose --profile frontend up -d   # Include frontend container
+docker compose down -v                    # Stop and remove volumes
 ```
 
 ### Backend
@@ -170,6 +178,8 @@ function MyTool() {
 
 ### Docker Compose Notes
 
-- `docker compose watch` does NOT auto-rebuild the frontend (it's a production nginx build)
-- After frontend changes, manually run: `docker compose build frontend && docker compose up -d frontend`
+- **Development**: Use `npm run dev` from repo root - starts minimal services (db + backend) with native Vite frontend
+- **Production-like**: Use `docker compose up` for full stack with Traefik, Adminer, etc.
+- `docker-compose.dev.yml` - minimal services for local dev (db, backend only)
+- `docker-compose.yml` + `docker-compose.override.yml` - full stack with all services
 - Backend hot-reloads automatically via FastAPI's `--reload` flag

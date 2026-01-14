@@ -93,6 +93,8 @@ services:
       - "1025:1025"
 
   frontend:
+    profiles:
+      - frontend
     restart: "no"
     ports:
       - "5173:80"
