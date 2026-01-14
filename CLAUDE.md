@@ -1,0 +1,106 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+MyKaraoke Video - Free Tools: A web application providing free tools for karaoke, audio processing, and music.
+- **Backend**: FastAPI (Python 3.10+) with SQLModel ORM and PostgreSQL
+- **Frontend**: React 19 with TypeScript, Vite, TanStack Query/Router, Tailwind CSS, shadcn/ui
+- **Infrastructure**: Docker Compose with Traefik reverse proxy
+- **No Authentication**: This is a public tools app with no login/registration
+
+## Common Commands
+
+### Development
+```bash
+docker compose watch              # Start full stack with hot reload (recommended)
+docker compose up -d              # Start stack in background
+docker compose down -v            # Stop and remove volumes
+```
+
+### Backend
+```bash
+cd backend
+uv sync                           # Install dependencies
+fastapi dev app/main.py           # Run dev server locally (outside Docker)
+
+# Testing
+bash scripts/test.sh                              # Full test suite with Docker
+docker compose exec backend bash scripts/tests-start.sh  # Tests on running stack
+
+# Code quality
+uv run ruff check --fix           # Lint and fix
+uv run ruff format                # Format
+uv run mypy app                   # Type check
+```
+
+### Frontend
+```bash
+cd frontend
+npm install                       # Install dependencies
+npm run dev                       # Dev server at http://localhost:5173
+npm run build                     # Production build
+npm run lint                      # Biome linter/formatter
+npx playwright test               # E2E tests (requires running stack)
+```
+
+### Database Migrations
+```bash
+docker compose exec backend bash
+alembic revision --autogenerate -m "description"  # Create migration
+alembic upgrade head                               # Apply migrations
+```
+
+### API Client Generation
+```bash
+./scripts/generate-client.sh      # Regenerate frontend client from backend OpenAPI
+```
+
+## Architecture
+
+### Backend Structure (`backend/app/`)
+- `main.py` - FastAPI app entry point
+- `models.py` - SQLModel database models and Pydantic schemas
+- `api/routes/` - API endpoints (utils for health check, add tool routes here)
+- `api/deps.py` - Dependency injection (database session)
+- `core/config.py` - Pydantic settings from `.env`
+- `core/db.py` - Database engine configuration
+- `alembic/` - Database migrations
+
+### Frontend Structure (`frontend/src/`)
+- `routes/` - TanStack Router file-based pages
+- `components/` - React components (shadcn/ui based)
+- `client/` - Auto-generated OpenAPI TypeScript client
+- `hooks/` - Custom React hooks
+
+### Data Flow
+1. Frontend uses auto-generated client from `src/client/`
+2. TanStack Query manages API state and caching
+3. Backend validates with Pydantic, uses SQLModel for DB operations
+
+## Key Patterns
+
+- **API-first**: Backend generates OpenAPI spec, frontend client auto-generated
+- **Type safety**: Pydantic (backend) + TypeScript (frontend)
+- **Form handling**: React Hook Form + Zod validation
+- **State**: TanStack Query for server state, React state for UI
+- **No auth**: All endpoints are public
+
+## Development URLs (when running locally)
+
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- Adminer (DB admin): http://localhost:8080
+- Traefik Dashboard: http://localhost:8090
+
+## Adding New Tools
+
+To add a new karaoke/audio tool:
+
+1. **Backend**: Create a new route file in `backend/app/api/routes/`
+2. **Register route**: Add to `backend/app/api/main.py`
+3. **Regenerate client**: Run `./scripts/generate-client.sh`
+4. **Frontend**: Create page in `frontend/src/routes/_layout/`
+5. **Add to sidebar**: Update `frontend/src/components/Sidebar/AppSidebar.tsx`
