@@ -112,6 +112,9 @@ To add a new karaoke/audio tool:
 3. **Frontend**: Create page in `frontend/src/routes/_layout/`
 4. **Update route tree**: Add route to `frontend/src/routeTree.gen.ts`
 5. **Add to sidebar**: Update `frontend/src/components/Sidebar/AppSidebar.tsx`
+6. **Update API docs**: Update `docs/BACKEND_API.md` with endpoint details, request/response schemas, and examples
+
+**IMPORTANT**: Whenever a backend tool endpoint is added, modified, or deleted, `docs/BACKEND_API.md` must be updated to reflect the changes. This file serves as the source of truth for frontend implementations.
 
 ### Tool Development Guidelines
 
