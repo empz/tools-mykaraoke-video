@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutKeyBpmAnalyzerRouteImport } from './routes/_layout/key-bpm-analyzer'
+import { Route as LayoutBpmChangerRouteImport } from './routes/_layout/bpm-changer'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -27,27 +28,35 @@ const LayoutKeyBpmAnalyzerRoute = LayoutKeyBpmAnalyzerRouteImport.update({
   path: '/key-bpm-analyzer',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutBpmChangerRoute = LayoutBpmChangerRouteImport.update({
+  id: '/bpm-changer',
+  path: '/bpm-changer',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/key-bpm-analyzer': typeof LayoutKeyBpmAnalyzerRoute
+  '/bpm-changer': typeof LayoutBpmChangerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof LayoutIndexRoute
   '/key-bpm-analyzer': typeof LayoutKeyBpmAnalyzerRoute
+  '/bpm-changer': typeof LayoutBpmChangerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/key-bpm-analyzer': typeof LayoutKeyBpmAnalyzerRoute
+  '/_layout/bpm-changer': typeof LayoutBpmChangerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/key-bpm-analyzer'
+  fullPaths: '/' | '/key-bpm-analyzer' | '/bpm-changer'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/key-bpm-analyzer'
-  id: '__root__' | '/_layout' | '/_layout/' | '/_layout/key-bpm-analyzer'
+  to: '/' | '/key-bpm-analyzer' | '/bpm-changer'
+  id: '__root__' | '/_layout' | '/_layout/' | '/_layout/key-bpm-analyzer' | '/_layout/bpm-changer'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,17 +86,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutKeyBpmAnalyzerRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/bpm-changer': {
+      id: '/_layout/bpm-changer'
+      path: '/bpm-changer'
+      fullPath: '/bpm-changer'
+      preLoaderRoute: typeof LayoutBpmChangerRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutKeyBpmAnalyzerRoute: typeof LayoutKeyBpmAnalyzerRoute
+  LayoutBpmChangerRoute: typeof LayoutBpmChangerRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutKeyBpmAnalyzerRoute: LayoutKeyBpmAnalyzerRoute,
+  LayoutBpmChangerRoute: LayoutBpmChangerRoute,
 }
 
 const LayoutRouteWithChildren =

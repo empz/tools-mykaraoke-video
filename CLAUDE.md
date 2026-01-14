@@ -101,6 +101,75 @@ To add a new karaoke/audio tool:
 
 1. **Backend**: Create a new route file in `backend/app/api/routes/`
 2. **Register route**: Add to `backend/app/api/main.py`
-3. **Regenerate client**: Run `./scripts/generate-client.sh`
-4. **Frontend**: Create page in `frontend/src/routes/_layout/`
+3. **Frontend**: Create page in `frontend/src/routes/_layout/`
+4. **Update route tree**: Add route to `frontend/src/routeTree.gen.ts`
 5. **Add to sidebar**: Update `frontend/src/components/Sidebar/AppSidebar.tsx`
+
+### Tool Development Guidelines
+
+**File Upload UX**:
+- Use `FileDropzone` component (`@/components/ui/file-dropzone`) for all file inputs
+- Supports both click-to-select and drag & drop
+- Auto-start processing when file is selected (no separate "Analyze" button)
+- Show loading state in dropzone during processing (`loading` prop)
+- Disable dropzone during processing (`disabled` prop)
+- Always keep dropzone visible so users can select another file after completion
+
+**Frontend Patterns**:
+- Use `useCallback` for async functions that need to be called from handlers
+- Use direct `fetch()` with `OpenAPI.BASE` for API calls (not the generated client)
+- Use `useCustomToast` hook for success/error notifications
+- Use shadcn/ui `Card` components for layout sections
+- Use `LoadingButton` for action buttons with loading states
+
+**Backend Audio Processing**:
+- Audio routes go in `backend/app/api/routes/audio.py`
+- Use `librosa` for audio analysis and processing
+- Use `soundfile` for audio file I/O
+- Use temporary files with cleanup in `finally` blocks
+- Validate: file extension, file size (100MB max), duration (15 min max)
+- Return processed audio as `StreamingResponse` with proper Content-Disposition header
+
+**Example Tool Structure** (see `key-bpm-analyzer.tsx` and `bpm-changer.tsx`):
+```typescript
+function MyTool() {
+  const [file, setFile] = useState<File | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [result, setResult] = useState<Result | null>(null)
+  const { showErrorToast, showSuccessToast } = useCustomToast()
+
+  const processFile = useCallback(async (fileToProcess: File) => {
+    setIsProcessing(true)
+    try {
+      // API call with FormData
+    } catch (error) {
+      showErrorToast(error.message)
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [showErrorToast])
+
+  const handleFileSelect = (selectedFile: File | null) => {
+    setFile(selectedFile)
+    setResult(null)
+    if (selectedFile) processFile(selectedFile)
+  }
+
+  return (
+    <Card>
+      <FileDropzone
+        onFileSelect={handleFileSelect}
+        selectedFile={file}
+        loading={isProcessing}
+        disabled={isProcessing}
+      />
+    </Card>
+  )
+}
+```
+
+### Docker Compose Notes
+
+- `docker compose watch` does NOT auto-rebuild the frontend (it's a production nginx build)
+- After frontend changes, manually run: `docker compose build frontend && docker compose up -d frontend`
+- Backend hot-reloads automatically via FastAPI's `--reload` flag

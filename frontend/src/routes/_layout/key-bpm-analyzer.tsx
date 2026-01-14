@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { Music, Upload } from "lucide-react"
-import { useRef, useState } from "react"
+import { Music } from "lucide-react"
+import { useCallback, useState } from "react"
+
 import { OpenAPI } from "@/client"
 import {
   Card,
@@ -9,9 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { LoadingButton } from "@/components/ui/loading-button"
+import { FileDropzone } from "@/components/ui/file-dropzone"
 import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/key-bpm-analyzer")({
@@ -31,45 +30,45 @@ function KeyBpmAnalyzer() {
   const [file, setFile] = useState<File | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const { showErrorToast } = useCustomToast()
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      setFile(selectedFile)
+  const analyzeFile = useCallback(
+    async (fileToAnalyze: File) => {
+      setIsAnalyzing(true)
       setResult(null)
-    }
-  }
 
-  const handleAnalyze = async () => {
-    if (!file) return
+      try {
+        const formData = new FormData()
+        formData.append("file", fileToAnalyze)
 
-    setIsAnalyzing(true)
-    setResult(null)
+        const response = await fetch(`${OpenAPI.BASE}/api/v1/audio/analyze`, {
+          method: "POST",
+          body: formData,
+        })
 
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.detail || "Analysis failed")
+        }
 
-      const response = await fetch(`${OpenAPI.BASE}/api/v1/audio/analyze`, {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Analysis failed")
+        const data: AnalysisResult = await response.json()
+        setResult(data)
+      } catch (error) {
+        showErrorToast(
+          error instanceof Error ? error.message : "Failed to analyze audio",
+        )
+      } finally {
+        setIsAnalyzing(false)
       }
+    },
+    [showErrorToast],
+  )
 
-      const data: AnalysisResult = await response.json()
-      setResult(data)
-    } catch (error) {
-      showErrorToast(
-        error instanceof Error ? error.message : "Failed to analyze audio",
-      )
-    } finally {
-      setIsAnalyzing(false)
+  const handleFileSelect = (selectedFile: File | null) => {
+    setFile(selectedFile)
+    setResult(null)
+    if (selectedFile) {
+      analyzeFile(selectedFile)
     }
   }
 
@@ -98,34 +97,15 @@ function KeyBpmAnalyzer() {
             Supported formats: MP3, WAV, FLAC (max 15 minutes)
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="audio-file">Audio File</Label>
-            <Input
-              id="audio-file"
-              type="file"
-              accept=".mp3,.wav,.flac,audio/mpeg,audio/wav,audio/flac"
-              onChange={handleFileChange}
-              ref={fileInputRef}
-            />
-          </div>
-
-          {file && (
-            <p className="text-sm text-muted-foreground">
-              Selected: {file.name} ({(file.size / (1024 * 1024)).toFixed(2)}{" "}
-              MB)
-            </p>
-          )}
-
-          <LoadingButton
-            onClick={handleAnalyze}
-            disabled={!file}
+        <CardContent>
+          <FileDropzone
+            accept=".mp3,.wav,.flac,audio/mpeg,audio/wav,audio/flac"
+            onFileSelect={handleFileSelect}
+            selectedFile={file}
+            description="Drag & drop an audio file here, or click to select"
+            disabled={isAnalyzing}
             loading={isAnalyzing}
-            className="w-full sm:w-auto"
-          >
-            <Upload className="h-4 w-4" />
-            {isAnalyzing ? "Analyzing..." : "Analyze"}
-          </LoadingButton>
+          />
         </CardContent>
       </Card>
 

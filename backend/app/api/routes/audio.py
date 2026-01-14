@@ -1,9 +1,12 @@
+import io
 import tempfile
 from pathlib import Path
 
 import librosa
 import numpy as np
-from fastapi import APIRouter, HTTPException, UploadFile
+import soundfile as sf  # type: ignore[import-untyped]
+from fastapi import APIRouter, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 
 from app.models import AudioAnalysisResult
 
@@ -116,6 +119,103 @@ async def analyze_audio(file: UploadFile) -> AudioAnalysisResult:
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to analyze audio: {str(e)}"
+        )
+    finally:
+        # Clean up temporary file
+        if tmp_path and tmp_path.exists():
+            tmp_path.unlink()
+
+
+# Mapping of file extensions to soundfile format strings
+EXTENSION_TO_FORMAT = {
+    ".wav": "WAV",
+    ".flac": "FLAC",
+    ".mp3": "MP3",
+}
+
+# Mapping of file extensions to MIME types
+EXTENSION_TO_MIME = {
+    ".wav": "audio/wav",
+    ".flac": "audio/flac",
+    ".mp3": "audio/mpeg",
+}
+
+
+@router.post("/change-bpm")
+async def change_bpm(
+    file: UploadFile,
+    bpm_factor: float = Form(..., ge=0.5, le=1.5),
+) -> StreamingResponse:
+    """
+    Change the BPM of an audio file using time stretching.
+
+    - bpm_factor: 0.5 = 50% speed (half tempo), 1.5 = 150% speed (1.5x tempo)
+    - Preserves pitch while changing tempo.
+    - Returns the processed audio file in the same format as input.
+    """
+    # Validate filename
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Filename is required")
+
+    # Validate file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed formats: {', '.join(ALLOWED_EXTENSIONS)}",
+        )
+
+    # Read and validate file size
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
+        )
+
+    tmp_path: Path | None = None
+    try:
+        # Save input file
+        with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+            tmp.write(content)
+
+        # Load audio
+        y, sr = librosa.load(str(tmp_path), sr=22050)
+        duration = float(librosa.get_duration(y=y, sr=sr))
+
+        # Validate duration
+        if duration > MAX_DURATION_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Audio too long. Maximum duration: {MAX_DURATION_SECONDS // 60} minutes",
+            )
+
+        # Apply time stretch (rate > 1 = faster, < 1 = slower)
+        y_stretched = librosa.effects.time_stretch(y, rate=bpm_factor)
+
+        # Write to buffer
+        buffer = io.BytesIO()
+        sf.write(buffer, y_stretched, sr, format=EXTENSION_TO_FORMAT[file_ext])
+        buffer.seek(0)
+
+        # Generate output filename
+        stem = Path(file.filename).stem
+        output_filename = f"{stem}_{int(bpm_factor * 100)}pct{file_ext}"
+
+        return StreamingResponse(
+            buffer,
+            media_type=EXTENSION_TO_MIME[file_ext],
+            headers={
+                "Content-Disposition": f'attachment; filename="{output_filename}"'
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process audio: {str(e)}"
         )
     finally:
         # Clean up temporary file
