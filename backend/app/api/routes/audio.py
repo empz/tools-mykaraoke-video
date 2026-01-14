@@ -1,6 +1,7 @@
 import io
 import tempfile
 from pathlib import Path
+from typing import Callable
 
 import librosa
 import numpy as np
@@ -141,6 +142,23 @@ EXTENSION_TO_MIME = {
 }
 
 
+def process_audio_stereo(
+    y: np.ndarray, process_fn: Callable[..., np.ndarray], **kwargs
+) -> np.ndarray:
+    """
+    Apply a processing function to audio, handling both mono and stereo.
+
+    For stereo audio (2D array), processes each channel separately.
+    """
+    if y.ndim == 1:
+        # Mono audio
+        return process_fn(y, **kwargs)
+    else:
+        # Stereo audio - process each channel separately
+        channels = [process_fn(y[ch], **kwargs) for ch in range(y.shape[0])]
+        return np.array(channels)
+
+
 @router.post("/change-bpm")
 async def change_bpm(
     file: UploadFile,
@@ -151,6 +169,7 @@ async def change_bpm(
 
     - bpm_factor: 0.5 = 50% speed (half tempo), 1.5 = 150% speed (1.5x tempo)
     - Preserves pitch while changing tempo.
+    - Preserves stereo and original sample rate for maximum quality.
     - Returns the processed audio file in the same format as input.
     """
     # Validate filename
@@ -180,8 +199,8 @@ async def change_bpm(
             tmp_path = Path(tmp.name)
             tmp.write(content)
 
-        # Load audio
-        y, sr = librosa.load(str(tmp_path), sr=22050)
+        # Load audio preserving stereo and original sample rate
+        y, sr = librosa.load(str(tmp_path), sr=None, mono=False)
         duration = float(librosa.get_duration(y=y, sr=sr))
 
         # Validate duration
@@ -192,11 +211,14 @@ async def change_bpm(
             )
 
         # Apply time stretch (rate > 1 = faster, < 1 = slower)
-        y_stretched = librosa.effects.time_stretch(y, rate=bpm_factor)
+        y_stretched = process_audio_stereo(
+            y, librosa.effects.time_stretch, rate=bpm_factor
+        )
 
-        # Write to buffer
+        # Write to buffer (transpose for stereo: librosa uses (channels, samples), soundfile uses (samples, channels))
         buffer = io.BytesIO()
-        sf.write(buffer, y_stretched, sr, format=EXTENSION_TO_FORMAT[file_ext])
+        audio_out = y_stretched.T if y_stretched.ndim == 2 else y_stretched
+        sf.write(buffer, audio_out, sr, format=EXTENSION_TO_FORMAT[file_ext])
         buffer.seek(0)
 
         # Generate output filename
@@ -233,6 +255,7 @@ async def pitch_shift(
 
     - semitones: -12 to +12 (negative = lower pitch, positive = higher pitch)
     - Preserves tempo while changing pitch.
+    - Preserves stereo and original sample rate for maximum quality.
     - Returns the processed audio file in the same format as input.
     """
     # Validate filename
@@ -262,8 +285,8 @@ async def pitch_shift(
             tmp_path = Path(tmp.name)
             tmp.write(content)
 
-        # Load audio
-        y, sr = librosa.load(str(tmp_path), sr=22050)
+        # Load audio preserving stereo and original sample rate
+        y, sr = librosa.load(str(tmp_path), sr=None, mono=False)
         duration = float(librosa.get_duration(y=y, sr=sr))
 
         # Validate duration
@@ -281,11 +304,14 @@ async def pitch_shift(
             )
 
         # Apply pitch shift
-        y_shifted = librosa.effects.pitch_shift(y, sr=sr, n_steps=semitones)
+        y_shifted = process_audio_stereo(
+            y, librosa.effects.pitch_shift, sr=sr, n_steps=semitones
+        )
 
-        # Write to buffer
+        # Write to buffer (transpose for stereo: librosa uses (channels, samples), soundfile uses (samples, channels))
         buffer = io.BytesIO()
-        sf.write(buffer, y_shifted, sr, format=EXTENSION_TO_FORMAT[file_ext])
+        audio_out = y_shifted.T if y_shifted.ndim == 2 else y_shifted
+        sf.write(buffer, audio_out, sr, format=EXTENSION_TO_FORMAT[file_ext])
         buffer.seek(0)
 
         # Generate output filename
